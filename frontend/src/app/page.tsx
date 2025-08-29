@@ -1,7 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import RegisterForm from '@/components/RegisterForm';
+import LoginForm from '@/components/LoginForm';
+import { Play, Users, Zap, Shield } from 'lucide-react';
 
 export default function Home() {
   const [isLogin, setIsLogin] = useState(false);
@@ -13,6 +23,11 @@ export default function Home() {
     setIsRegistered(true);
   };
 
+  const handleLoginSuccess = (data: any) => {
+    setUserData(data);
+    setIsRegistered(true);
+  };
+
   if (isRegistered && userData) {
     // Redirect to streamer page
     window.location.href = '/streamer';
@@ -20,78 +35,116 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-white mb-4">
+          <h1 className="text-5xl font-bold text-foreground mb-4">
             Streaming Platform
           </h1>
-          <p className="text-xl text-blue-200">
+          <p className="text-xl text-muted-foreground mb-8">
             Платформа для стрімінгу та перегляду відео
           </p>
-          
+
           {/* Navigation Links */}
-          <div className="mt-6 flex justify-center space-x-4">
-            <a
-              href="/streamer"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              🎬 Streamer Dashboard
-            </a>
-            <a
-              href="/viewer"
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
-            >
-              📺 Watch Streams
-            </a>
+          <div className="flex justify-center space-x-4">
+            <Button size="lg" className="gap-2" asChild>
+              <a href="/streamer">
+                <Play className="h-4 w-4" />
+                Streamer Dashboard
+              </a>
+            </Button>
+            <Button size="lg" variant="secondary" className="gap-2" asChild>
+              <a href="/viewer">
+                <Users className="h-4 w-4" />
+                Watch Streams
+              </a>
+            </Button>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div className="text-white">
-              <h2 className="text-3xl font-bold mb-4">
-                Починайте стрімити зараз
-              </h2>
-              <ul className="space-y-3 text-lg">
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                  Легко налаштовуйте трансляції
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                  Автоматичне збереження ефірів
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                  Переглядайте у будь-якому браузері
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                  Безкоштовно та без обмежень
-                </li>
-              </ul>
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-start">
+            {/* Features Section */}
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-3xl font-bold text-foreground mb-6">
+                  Починайте стрімити зараз
+                </h2>
+                <div className="grid gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Zap className="h-5 w-5 text-primary" />
+                        Легко налаштовуйте трансляції
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription>
+                        Інтуїтивний інтерфейс для швидкого початку стрімінгу
+                      </CardDescription>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-primary" />
+                        Автоматичне збереження ефірів
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription>
+                        Всі трансляції автоматично зберігаються для перегляду
+                        пізніше
+                      </CardDescription>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Play className="h-5 w-5 text-primary" />
+                        Переглядайте у будь-якому браузері
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription>
+                        Підтримка всіх сучасних браузерів без додаткових
+                        плагінів
+                      </CardDescription>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Users className="h-5 w-5 text-primary" />
+                        Безкоштовно та без обмежень
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription>
+                        Користуйтесь всіма функціями платформи абсолютно
+                        безкоштовно
+                      </CardDescription>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </div>
 
-            <div>
+            {/* Auth Forms Section */}
+            <div className="flex justify-center">
               {!isLogin ? (
-                <RegisterForm 
+                <RegisterForm
                   onSwitchToLogin={() => setIsLogin(true)}
                   onSuccess={handleRegistrationSuccess}
                 />
               ) : (
-                <div className="bg-white rounded-lg shadow-lg p-8">
-                  <div className="text-center">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Увійти</h2>
-                    <p className="text-gray-600 mb-6">Форма входу буде додана пізніше</p>
-                    <button
-                      onClick={() => setIsLogin(false)}
-                      className="text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Створити акаунт
-                    </button>
-                  </div>
-                </div>
+                <LoginForm
+                  onSwitchToRegister={() => setIsLogin(false)}
+                  onSuccess={handleLoginSuccess}
+                />
               )}
             </div>
           </div>

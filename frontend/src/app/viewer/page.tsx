@@ -1,24 +1,50 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Loader2,
+  Copy,
+  ExternalLink,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function ViewerPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentStream, setCurrentStream] = useState('');
-  const [availableStreams, setAvailableStreams] = useState<Array<{
-    _id: string;
-    title: string;
-    user?: {
-      displayName?: string;
-      username?: string;
-    };
-    streamKey: string; // Added streamKey to the type definition
-  }>>([]);
+  const [availableStreams, setAvailableStreams] = useState<
+    Array<{
+      _id: string;
+      title: string;
+      user?: {
+        displayName?: string;
+        username?: string;
+      };
+      streamKey: string;
+    }>
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [streamUrl, setStreamUrl] = useState(''); // Added streamUrl state
+  const [streamUrl, setStreamUrl] = useState('');
 
   // Fetch available streams from backend
   useEffect(() => {
@@ -26,12 +52,13 @@ export default function ViewerPage() {
       try {
         const response = await fetch('http://localhost:3001/api/streams/live');
         if (response.ok) {
-          const data = await response.json(); // Expecting { streams: [], count: N }
+          const data = await response.json();
           setAvailableStreams(data.streams || []);
           if (data.streams && data.streams.length > 0) {
             setCurrentStream(data.streams[0]._id);
-            // Use streamKey for HLS URL instead of stream ID
-            setStreamUrl(`http://localhost:8000/live/${data.streams[0].streamKey}/index.m3u8`);
+            setStreamUrl(
+              `http://localhost:8000/live/${data.streams[0].streamKey}/index.m3u8`
+            );
           }
         }
       } catch (error) {
@@ -42,7 +69,6 @@ export default function ViewerPage() {
     };
 
     fetchStreams();
-    // Poll for new streams every 5 seconds
     const interval = setInterval(fetchStreams, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -50,10 +76,13 @@ export default function ViewerPage() {
   // Update stream URL when current stream changes
   useEffect(() => {
     if (currentStream && availableStreams.length > 0) {
-      const selectedStream = availableStreams.find(stream => stream._id === currentStream);
+      const selectedStream = availableStreams.find(
+        (stream) => stream._id === currentStream
+      );
       if (selectedStream) {
-        // Use streamKey for HLS URL instead of stream ID
-        setStreamUrl(`http://localhost:8000/live/${selectedStream.streamKey}/index.m3u8`);
+        setStreamUrl(
+          `http://localhost:8000/live/${selectedStream.streamKey}/index.m3u8`
+        );
       }
     }
   }, [currentStream, availableStreams]);
@@ -66,209 +95,300 @@ export default function ViewerPage() {
     setIsMuted(!isMuted);
   };
 
+  const copyHLSUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(streamUrl);
+      toast.success('HLS URL скопійовано!');
+    } catch (error) {
+      toast.error('Не вдалось скопіювати URL');
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading streams...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground text-xl">
+            Завантажуємо стріми...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">
-            🎥 Live Stream Viewer
+          <h1 className="text-4xl font-bold text-foreground mb-4">
+            🎥 Перегляд Live стрімів
           </h1>
-          <p className="text-xl text-blue-200">
-            Watch live streams from our platform
+          <p className="text-xl text-muted-foreground">
+            Дивіться живі трансляції з нашої платформи
           </p>
         </div>
 
         <div className="max-w-4xl mx-auto">
           {/* Stream Selector */}
           {availableStreams.length > 0 && (
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                📺 Available Live Streams
-              </h2>
-              <select
-                value={currentStream}
-                onChange={(e) => setCurrentStream(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                {availableStreams.map((stream) => (
-                  <option key={stream._id} value={stream._id}>
-                    {stream.title} - {stream.user?.displayName || stream.user?.username}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  📺 Доступні Live стріми
+                  <Badge variant="destructive" className="bg-red-600">
+                    {availableStreams.length} Live
+                  </Badge>
+                </CardTitle>
+                <CardDescription>Оберіть стрім для перегляду</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Select value={currentStream} onValueChange={setCurrentStream}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Оберіть стрім" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableStreams.map((stream) => (
+                      <SelectItem key={stream._id} value={stream._id}>
+                        {stream.title} -{' '}
+                        {stream.user?.displayName || stream.user?.username}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
           )}
 
           {/* Stream Player */}
           {availableStreams.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                📺 No Live Streams Available
-              </h2>
-              <p className="text-gray-600 mb-4">
-                There are no active streams right now. Ask a streamer to go live!
-              </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-medium text-blue-900 mb-2">💡 How to watch:</h3>
-                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                  <li>Wait for a streamer to start broadcasting</li>
-                  <li>Or go to <a href="/streamer" className="text-blue-600 hover:underline">Streamer Dashboard</a> to start your own stream</li>
-                </ol>
-              </div>
-            </div>
+            <Card>
+              <CardHeader className="text-center">
+                <CardTitle>📺 Немає активних стрімів</CardTitle>
+                <CardDescription>
+                  Наразі немає активних трансляцій. Запросіть стрімера почати
+                  трансляцію!
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="text-sm">
+                      💡 Як переглядати:
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-2">
+                    <p>1. Почекайте, поки стрімер почне трансляцію</p>
+                    <p>
+                      2. Або перейдіть до{' '}
+                      <Button variant="link" className="p-0 h-auto" asChild>
+                        <a href="/streamer">Streamer Dashboard</a>
+                      </Button>
+                      , щоб почати власний стрім
+                    </p>
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
           ) : (
             <>
-              <div className="bg-black rounded-lg shadow-2xl overflow-hidden mb-8">
-                <div className="relative aspect-video">
-                  {isPlaying ? (
-                    <video
-                      src={streamUrl}
-                      controls
-                      autoPlay
-                      muted={isMuted}
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        console.error('Video error:', e);
-                        toast.error('Failed to load stream. Make sure the stream is live.');
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                      <div className="text-center text-white">
-                        <Play className="w-16 h-16 mx-auto mb-4 text-blue-400" />
-                        <p className="text-lg">Click Play to start watching</p>
-                        <p className="text-sm text-gray-400 mt-2">
-                          Stream URL: {streamUrl}
-                        </p>
-                      </div>
+              {/* Video Player */}
+              <Card className="mb-8">
+                <CardContent className="p-0">
+                  <div className="bg-black rounded-lg overflow-hidden">
+                    <div className="relative aspect-video">
+                      {isPlaying ? (
+                        <video
+                          src={streamUrl}
+                          controls
+                          autoPlay
+                          muted={isMuted}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            console.error('Video error:', e);
+                            toast.error(
+                              'Не вдалось завантажити стрім. Переконайтесь, що стрім активний.'
+                            );
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <div className="text-center">
+                            <Play className="w-16 h-16 mx-auto mb-4 text-primary" />
+                            <p className="text-lg font-medium">
+                              Натисніть Play для початку перегляду
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-2">
+                              Stream URL: {streamUrl}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                {/* Custom Controls */}
-                <div className="bg-gray-800 p-4 flex items-center justify-center space-x-4">
-                  <button
-                    onClick={togglePlay}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                  >
-                    {isPlaying ? (
-                      <>
-                        <Pause className="w-4 h-4 mr-2" />
-                        Pause
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4 mr-2" />
-                        Play
-                      </>
-                    )}
-                  </button>
+                    {/* Custom Controls */}
+                    <div className="bg-card border-t p-4 flex items-center justify-center space-x-4">
+                      <Button onClick={togglePlay} className="gap-2">
+                        {isPlaying ? (
+                          <>
+                            <Pause className="w-4 h-4" />
+                            Пауза
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4" />
+                            Відтворити
+                          </>
+                        )}
+                      </Button>
 
-                  <button
-                    onClick={toggleMute}
-                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center"
-                  >
-                    {isMuted ? (
-                      <>
-                        <VolumeX className="w-4 h-4 mr-2" />
-                        Unmute
-                      </>
-                    ) : (
-                      <>
-                        <Volume2 className="w-4 h-4 mr-2" />
-                        Mute
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
+                      <Button
+                        variant="secondary"
+                        onClick={toggleMute}
+                        className="gap-2"
+                      >
+                        {isMuted ? (
+                          <>
+                            <VolumeX className="w-4 h-4" />
+                            Увімкнути звук
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-4 h-4" />
+                            Вимкнути звук
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Stream Info */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  📡 Stream Information
-                </h2>
-                
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-medium text-gray-700 mb-2">Current Stream:</h3>
-                    <p className="text-lg font-semibold text-blue-600">{currentStream}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-medium text-gray-700 mb-2">Stream Key:</h3>
-                    <p className="text-lg font-semibold text-green-600">
-                      {availableStreams.find(s => s._id === currentStream)?.streamKey || 'N/A'}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-medium text-gray-700 mb-2">HLS URL:</h3>
-                    <code className="bg-gray-100 px-3 py-2 rounded text-sm break-all">
-                      {streamUrl}
-                    </code>
-                  </div>
-                </div>
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>📡 Інформація про стрім</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="font-medium text-muted-foreground mb-2">
+                        Поточний стрім:
+                      </h3>
+                      <p className="text-lg font-semibold text-primary">
+                        {currentStream}
+                      </p>
+                    </div>
 
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h3 className="font-medium text-blue-900 mb-2">💡 How to watch:</h3>
-                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                    <li>Make sure the streamer is live (green "Live Now" status)</li>
-                    <li>Click the Play button above</li>
-                    <li>If using external player, copy the HLS URL above</li>
-                    <li>For mobile, use VLC or similar HLS-compatible app</li>
-                  </ol>
-                </div>
-              </div>
+                    <div>
+                      <h3 className="font-medium text-muted-foreground mb-2">
+                        Ключ стріму:
+                      </h3>
+                      <p className="text-lg font-semibold text-green-600">
+                        {availableStreams.find((s) => s._id === currentStream)
+                          ?.streamKey || 'N/A'}
+                      </p>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <h3 className="font-medium text-muted-foreground mb-2">
+                        HLS URL:
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 bg-muted px-3 py-2 rounded text-sm break-all">
+                          {streamUrl}
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={copyHLSUrl}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Card className="mt-6 bg-primary/5 border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="text-sm">
+                        💡 Як переглядати:
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-1">
+                      <p>
+                        1. Переконайтесь, що стрімер в ефірі (статус "Live Now")
+                      </p>
+                      <p>2. Натисніть кнопку Play вище</p>
+                      <p>3. Для зовнішнього плеєра скопіюйте HLS URL вище</p>
+                      <p>
+                        4. Для мобільного перегляду використовуйте VLC або
+                        подібний HLS-сумісний додаток
+                      </p>
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
 
               {/* Alternative Players */}
-              <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  🔧 Alternative Players
-                </h2>
-                
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-medium text-gray-900 mb-2">VLC Media Player</h3>
-                    <p className="text-sm text-gray-600 mb-2">
-                      Open VLC → Media → Open Network Stream → Paste HLS URL
-                    </p>
-                    <button
-                      onClick={() => {
-                        window.open(`vlc://${streamUrl}`);
-                        toast.success('Opening in VLC...');
-                      }}
-                      className="bg-orange-600 text-white px-4 py-2 rounded text-sm hover:bg-orange-700"
-                    >
-                      Open in VLC
-                    </button>
+              <Card>
+                <CardHeader>
+                  <CardTitle>🔧 Альтернативні плеєри</CardTitle>
+                  <CardDescription>
+                    Використовуйте зовнішні програми для перегляду
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">
+                          VLC Media Player
+                        </CardTitle>
+                        <CardDescription>
+                          Відкрийте VLC → Медіа → Відкрити мережевий потік →
+                          Вставте HLS URL
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button
+                          variant="secondary"
+                          className="w-full gap-2"
+                          onClick={() => {
+                            window.open(`vlc://${streamUrl}`);
+                            toast.success('Відкриваємо в VLC...');
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Відкрити в VLC
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">
+                          Прямий HLS лінк
+                        </CardTitle>
+                        <CardDescription>
+                          Скопіюйте та вставте цей URL в будь-який HLS-сумісний
+                          плеєр
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button
+                          variant="secondary"
+                          className="w-full gap-2"
+                          onClick={copyHLSUrl}
+                        >
+                          <Copy className="h-4 w-4" />
+                          Скопіювати HLS URL
+                        </Button>
+                      </CardContent>
+                    </Card>
                   </div>
-                  
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-medium text-gray-900 mb-2">Direct HLS Link</h3>
-                    <p className="text-sm text-gray-600 mb-2">
-                      Copy and paste this URL in any HLS-compatible player
-                    </p>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(streamUrl);
-                        toast.success('HLS URL copied to clipboard!');
-                      }}
-                      className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
-                    >
-                      Copy HLS URL
-                    </button>
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </>
           )}
         </div>
