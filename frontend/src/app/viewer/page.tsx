@@ -98,9 +98,9 @@ export default function ViewerPage() {
   const copyHLSUrl = async () => {
     try {
       await navigator.clipboard.writeText(streamUrl);
-      toast.success('HLS URL скопійовано!');
+      toast.success('HLS URL copied!');
     } catch (error) {
-      toast.error('Не вдалось скопіювати URL');
+      toast.error('Failed to copy URL');
     }
   };
 
@@ -109,9 +109,7 @@ export default function ViewerPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground text-xl">
-            Завантажуємо стріми...
-          </p>
+          <p className="text-muted-foreground text-xl">Loading streams...</p>
         </div>
       </div>
     );
@@ -122,10 +120,10 @@ export default function ViewerPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-4">
-            🎥 Перегляд Live стрімів
+            🎥 Watch Live Streams
           </h1>
           <p className="text-xl text-muted-foreground">
-            Дивіться живі трансляції з нашої платформи
+            Watch live broadcasts from our platform
           </p>
         </div>
 
@@ -135,17 +133,17 @@ export default function ViewerPage() {
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  📺 Доступні Live стріми
+                  📺 Available Live Streams
                   <Badge variant="destructive" className="bg-red-600">
                     {availableStreams.length} Live
                   </Badge>
                 </CardTitle>
-                <CardDescription>Оберіть стрім для перегляду</CardDescription>
+                <CardDescription>Select a stream to watch</CardDescription>
               </CardHeader>
               <CardContent>
                 <Select value={currentStream} onValueChange={setCurrentStream}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Оберіть стрім" />
+                    <SelectValue placeholder="Select a stream" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableStreams.map((stream) => (
@@ -164,27 +162,25 @@ export default function ViewerPage() {
           {availableStreams.length === 0 ? (
             <Card>
               <CardHeader className="text-center">
-                <CardTitle>📺 Немає активних стрімів</CardTitle>
+                <CardTitle>📺 No Active Streams</CardTitle>
                 <CardDescription>
-                  Наразі немає активних трансляцій. Запросіть стрімера почати
-                  трансляцію!
+                  There are no active broadcasts right now. Ask a streamer to
+                  start streaming!
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Card className="bg-primary/5 border-primary/20">
                   <CardHeader>
-                    <CardTitle className="text-sm">
-                      💡 Як переглядати:
-                    </CardTitle>
+                    <CardTitle className="text-sm">💡 How to watch:</CardTitle>
                   </CardHeader>
                   <CardContent className="text-sm space-y-2">
-                    <p>1. Почекайте, поки стрімер почне трансляцію</p>
+                    <p>1. Wait for a streamer to start broadcasting</p>
                     <p>
-                      2. Або перейдіть до{' '}
+                      2. Or go to{' '}
                       <Button variant="link" className="p-0 h-auto" asChild>
                         <a href="/streamer">Streamer Dashboard</a>
-                      </Button>
-                      , щоб почати власний стрім
+                      </Button>{' '}
+                      to start your own stream
                     </p>
                   </CardContent>
                 </Card>
@@ -207,7 +203,7 @@ export default function ViewerPage() {
                           onError={(e) => {
                             console.error('Video error:', e);
                             toast.error(
-                              'Не вдалось завантажити стрім. Переконайтесь, що стрім активний.'
+                              'Failed to load stream. Make sure the stream is active.'
                             );
                           }}
                         />
@@ -216,7 +212,7 @@ export default function ViewerPage() {
                           <div className="text-center">
                             <Play className="w-16 h-16 mx-auto mb-4 text-primary" />
                             <p className="text-lg font-medium">
-                              Натисніть Play для початку перегляду
+                              Click Play to start watching
                             </p>
                             <p className="text-sm text-muted-foreground mt-2">
                               Stream URL: {streamUrl}
@@ -232,12 +228,12 @@ export default function ViewerPage() {
                         {isPlaying ? (
                           <>
                             <Pause className="w-4 h-4" />
-                            Пауза
+                            Pause
                           </>
                         ) : (
                           <>
                             <Play className="w-4 h-4" />
-                            Відтворити
+                            Play
                           </>
                         )}
                       </Button>
@@ -250,12 +246,12 @@ export default function ViewerPage() {
                         {isMuted ? (
                           <>
                             <VolumeX className="w-4 h-4" />
-                            Увімкнути звук
+                            Unmute
                           </>
                         ) : (
                           <>
                             <Volume2 className="w-4 h-4" />
-                            Вимкнути звук
+                            Mute
                           </>
                         )}
                       </Button>
@@ -267,13 +263,13 @@ export default function ViewerPage() {
               {/* Stream Info */}
               <Card className="mb-6">
                 <CardHeader>
-                  <CardTitle>📡 Інформація про стрім</CardTitle>
+                  <CardTitle>📡 Stream Information</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
                       <h3 className="font-medium text-muted-foreground mb-2">
-                        Поточний стрім:
+                        Current Stream:
                       </h3>
                       <p className="text-lg font-semibold text-primary">
                         {currentStream}
@@ -282,7 +278,7 @@ export default function ViewerPage() {
 
                     <div>
                       <h3 className="font-medium text-muted-foreground mb-2">
-                        Ключ стріму:
+                        Stream Key:
                       </h3>
                       <p className="text-lg font-semibold text-green-600">
                         {availableStreams.find((s) => s._id === currentStream)
@@ -312,18 +308,18 @@ export default function ViewerPage() {
                   <Card className="mt-6 bg-primary/5 border-primary/20">
                     <CardHeader>
                       <CardTitle className="text-sm">
-                        💡 Як переглядати:
+                        💡 How to watch:
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="text-sm space-y-1">
                       <p>
-                        1. Переконайтесь, що стрімер в ефірі (статус "Live Now")
+                        1. Make sure the streamer is live (status "Live Now")
                       </p>
-                      <p>2. Натисніть кнопку Play вище</p>
-                      <p>3. Для зовнішнього плеєра скопіюйте HLS URL вище</p>
+                      <p>2. Click the Play button above</p>
+                      <p>3. For external player, copy the HLS URL above</p>
                       <p>
-                        4. Для мобільного перегляду використовуйте VLC або
-                        подібний HLS-сумісний додаток
+                        4. For mobile viewing, use VLC or similar HLS-compatible
+                        app
                       </p>
                     </CardContent>
                   </Card>
@@ -333,9 +329,9 @@ export default function ViewerPage() {
               {/* Alternative Players */}
               <Card>
                 <CardHeader>
-                  <CardTitle>🔧 Альтернативні плеєри</CardTitle>
+                  <CardTitle>🔧 Alternative Players</CardTitle>
                   <CardDescription>
-                    Використовуйте зовнішні програми для перегляду
+                    Use external applications to watch
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -346,8 +342,7 @@ export default function ViewerPage() {
                           VLC Media Player
                         </CardTitle>
                         <CardDescription>
-                          Відкрийте VLC → Медіа → Відкрити мережевий потік →
-                          Вставте HLS URL
+                          Open VLC → Media → Open Network Stream → Paste HLS URL
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -356,11 +351,11 @@ export default function ViewerPage() {
                           className="w-full gap-2"
                           onClick={() => {
                             window.open(`vlc://${streamUrl}`);
-                            toast.success('Відкриваємо в VLC...');
+                            toast.success('Opening in VLC...');
                           }}
                         >
                           <ExternalLink className="h-4 w-4" />
-                          Відкрити в VLC
+                          Open in VLC
                         </Button>
                       </CardContent>
                     </Card>
@@ -368,11 +363,10 @@ export default function ViewerPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-lg">
-                          Прямий HLS лінк
+                          Direct HLS Link
                         </CardTitle>
                         <CardDescription>
-                          Скопіюйте та вставте цей URL в будь-який HLS-сумісний
-                          плеєр
+                          Copy and paste this URL into any HLS-compatible player
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -382,7 +376,7 @@ export default function ViewerPage() {
                           onClick={copyHLSUrl}
                         >
                           <Copy className="h-4 w-4" />
-                          Скопіювати HLS URL
+                          Copy HLS URL
                         </Button>
                       </CardContent>
                     </Card>

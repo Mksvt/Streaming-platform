@@ -10,6 +10,7 @@ import {
   Play,
   Square,
   Monitor,
+  Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
@@ -24,16 +25,16 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-interface StreamerPageProps {
-  user: {
-    username: string;
-    displayName: string;
-    streamKey: string;
-    isStreamer: boolean;
-  };
+interface User {
+  id: string;
+  username: string;
+  displayName: string;
+  streamKey: string;
+  isStreamer: boolean;
 }
 
 export default function StreamerPage() {
+  const [user, setUser] = useState<User | null>(null);
   const [showStreamKey, setShowStreamKey] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamTitle, setStreamTitle] = useState('');
@@ -44,26 +45,28 @@ export default function StreamerPage() {
     hlsUrl: string;
   } | null>(null);
 
-  // Тимчасові дані для тестування
-  const user = {
-    username: 'heur',
-    displayName: 'Heur',
-    streamKey: 'heur-stream-key-12345',
-    isStreamer: true,
-  };
+  useEffect(() => {
+    const userDataString = localStorage.getItem('user');
+    if (userDataString) {
+      setUser(JSON.parse(userDataString));
+    } else {
+      window.location.href = '/';
+    }
+  }, []);
 
   const copyStreamKey = async () => {
+    if (!user) return;
     try {
       await navigator.clipboard.writeText(user.streamKey);
-      toast.success('Ключ потоку скопійовано!');
+      toast.success('Stream key copied!');
     } catch (error) {
-      toast.error('Не вдалось скопіювати ключ потоку');
+      toast.error('Failed to copy stream key');
     }
   };
 
   const startStream = async () => {
     if (!streamTitle.trim()) {
-      toast.error('Будь ласка, введіть назву стріму');
+      toast.error('Please enter stream title');
       return;
     }
 
@@ -73,7 +76,7 @@ export default function StreamerPage() {
 
     if (!token) {
       toast.error(
-        'Не знайдено токен автентифікації. Будь ласка, зареєструйтесь або увійдіть.'
+        'Authentication token not found. Please register or sign in.'
       );
       return;
     }
@@ -97,24 +100,24 @@ export default function StreamerPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Не вдалось запустити стрім');
+        throw new Error(result.error || 'Failed to start stream');
       }
 
       setIsStreaming(true);
-      toast.success('Стрім запущено! RTMP потік тепер в ефірі.');
+      toast.success('Stream started! RTMP stream is now live.');
 
       // Store stream info
       setStreamInfo(result);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Не вдалось запустити стрім'
+        error instanceof Error ? error.message : 'Failed to start stream'
       );
     }
   };
 
   const stopStream = async () => {
     if (!streamInfo?.streamId) {
-      toast.error('Немає активного стріму для зупинки');
+      toast.error('No active stream to stop');
       return;
     }
 
@@ -133,28 +136,36 @@ export default function StreamerPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Не вдалось зупинити стрім');
+        throw new Error(result.error || 'Failed to stop stream');
       }
 
       setIsStreaming(false);
       setStreamInfo(null);
-      toast.success('Стрім зупинено!');
+      toast.success('Stream stopped!');
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Не вдалось зупинити стрім'
+        error instanceof Error ? error.message : 'Failed to stop stream'
       );
     }
   };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-4">
-            Ласкаво просимо, {user.displayName}! 🎬
+            Welcome, {user.displayName}! 🎬
           </h1>
           <p className="text-xl text-muted-foreground">
-            Ваша панель керування стрімами
+            Your streaming control panel
           </p>
         </div>
 
@@ -164,33 +175,33 @@ export default function StreamerPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                Налаштування стріму
+                Stream Settings
               </CardTitle>
               <CardDescription>
-                Налаштуйте параметри вашої трансляції
+                Configure your stream parameters
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="stream-title">Назва стріму</Label>
+                <Label htmlFor="stream-title">Stream Title</Label>
                 <Input
                   id="stream-title"
                   type="text"
                   value={streamTitle}
                   onChange={(e) => setStreamTitle(e.target.value)}
-                  placeholder="Введіть назву вашого стріму"
+                  placeholder="Enter your stream title"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stream-description">Опис</Label>
+                <Label htmlFor="stream-description">Description</Label>
                 <textarea
                   id="stream-description"
                   value={streamDescription}
                   onChange={(e) => setStreamDescription(e.target.value)}
                   rows={3}
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Опишіть ваш стрім"
+                  placeholder="Describe your stream"
                 />
               </div>
 
@@ -202,7 +213,7 @@ export default function StreamerPage() {
                     size="lg"
                   >
                     <Play className="h-4 w-4" />
-                    Почати стрім
+                    Start Stream
                   </Button>
                 ) : (
                   <Button
@@ -212,7 +223,7 @@ export default function StreamerPage() {
                     size="lg"
                   >
                     <Square className="h-4 w-4" />
-                    Зупинити стрім
+                    Stop Stream
                   </Button>
                 )}
               </div>
@@ -224,15 +235,15 @@ export default function StreamerPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Video className="h-5 w-5" />
-                Налаштування OBS
+                OBS Setup
               </CardTitle>
               <CardDescription>
-                Інформація для підключення OBS Studio
+                Information for connecting OBS Studio
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Ключ потоку</Label>
+                <Label>Stream Key</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type={showStreamKey ? 'text' : 'password'}
@@ -261,35 +272,32 @@ export default function StreamerPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Monitor className="h-4 w-4" />
-                    Налаштування OBS Studio:
+                    OBS Studio Settings:
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm space-y-1">
                   <p>
-                    <strong>Тип стріму:</strong> Власний
+                    <strong>Stream Type:</strong> Custom
                   </p>
                   <p>
-                    <strong>Сервер:</strong> rtmp://localhost:1935/live
+                    <strong>Server:</strong> rtmp://localhost:1935/live
                   </p>
                   <p>
-                    <strong>Ключ потоку:</strong> {user.streamKey}
+                    <strong>Stream Key:</strong> {user.streamKey}
                   </p>
                 </CardContent>
               </Card>
 
               <Card className="bg-secondary/50 border-secondary">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">
-                    Перегляд вашого стріму:
-                  </CardTitle>
+                  <CardTitle className="text-sm">Watch your stream:</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
                   <p className="mb-2">
-                    Після початку стріму, глядачі зможуть переглядати за
-                    адресою:
+                    After starting the stream, viewers can watch at:
                   </p>
                   <code className="block bg-muted p-2 rounded text-xs break-all">
-                    http://localhost:8000/live/{user.streamKey}/index.m3u8
+                    http://localhost:8000/live/{user.username}/index.m3u8
                   </code>
                 </CardContent>
               </Card>
@@ -308,17 +316,17 @@ export default function StreamerPage() {
                   </Badge>
                 </div>
                 <CardTitle className="text-green-900">
-                  🎥 В ефірі зараз: {streamTitle}
+                  🎥 Currently Live: {streamTitle}
                 </CardTitle>
                 <CardDescription className="text-green-700">
-                  Ваш стрім наразі транслюється і записується!
+                  Your stream is currently broadcasting and recording!
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
                   <Card>
                     <CardContent className="p-3">
-                      <strong>ID стріму:</strong> {streamInfo.streamId}
+                      <strong>Stream ID:</strong> {streamInfo.streamId}
                     </CardContent>
                   </Card>
                   <Card>
@@ -333,10 +341,10 @@ export default function StreamerPage() {
                   </Card>
                   <Card>
                     <CardContent className="p-3">
-                      <strong>Глядачі можуть переглядати:</strong>{' '}
+                      <strong>Viewers can watch:</strong>{' '}
                       <Button variant="link" className="p-0 h-auto" asChild>
                         <a href={streamInfo.hlsUrl} target="_blank">
-                          Відкрити стрім
+                          Open Stream
                         </a>
                       </Button>
                     </CardContent>

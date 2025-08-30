@@ -42,7 +42,7 @@ export default function Home() {
             Streaming Platform
           </h1>
           <p className="text-xl text-muted-foreground mb-8">
-            Платформа для стрімінгу та перегляду відео
+            Platform for streaming and watching videos
           </p>
 
           {/* Navigation Links */}
@@ -68,19 +68,19 @@ export default function Home() {
             <div className="space-y-8">
               <div>
                 <h2 className="text-3xl font-bold text-foreground mb-6">
-                  Починайте стрімити зараз
+                  Start Streaming Now
                 </h2>
                 <div className="grid gap-4">
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg flex items-center gap-2">
                         <Zap className="h-5 w-5 text-primary" />
-                        Легко налаштовуйте трансляції
+                        Easy Stream Setup
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <CardDescription>
-                        Інтуїтивний інтерфейс для швидкого початку стрімінгу
+                        Intuitive interface for quick stream setup
                       </CardDescription>
                     </CardContent>
                   </Card>
@@ -89,13 +89,12 @@ export default function Home() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg flex items-center gap-2">
                         <Shield className="h-5 w-5 text-primary" />
-                        Автоматичне збереження ефірів
+                        Automatic Stream Recording
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <CardDescription>
-                        Всі трансляції автоматично зберігаються для перегляду
-                        пізніше
+                        All streams are automatically saved for later viewing
                       </CardDescription>
                     </CardContent>
                   </Card>
@@ -104,13 +103,13 @@ export default function Home() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg flex items-center gap-2">
                         <Play className="h-5 w-5 text-primary" />
-                        Переглядайте у будь-якому браузері
+                        Watch in Any Browser
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <CardDescription>
-                        Підтримка всіх сучасних браузерів без додаткових
-                        плагінів
+                        Support for all modern browsers without additional
+                        plugins
                       </CardDescription>
                     </CardContent>
                   </Card>
@@ -119,13 +118,12 @@ export default function Home() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg flex items-center gap-2">
                         <Users className="h-5 w-5 text-primary" />
-                        Безкоштовно та без обмежень
+                        Free and Unlimited
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <CardDescription>
-                        Користуйтесь всіма функціями платформи абсолютно
-                        безкоштовно
+                        Use all platform features completely free
                       </CardDescription>
                     </CardContent>
                   </Card>

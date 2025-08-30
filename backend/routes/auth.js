@@ -19,20 +19,26 @@ router.post('/register', async (req, res) => {
 
     // Validation
     if (!username || !email || !password) {
-      return res.status(400).json({ error: 'Please provide all required fields.' });
+      return res
+        .status(400)
+        .json({ error: 'Please provide all required fields.' });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+      return res
+        .status(400)
+        .json({ error: 'Password must be at least 6 characters long.' });
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({
-      $or: [{ email }, { username }]
+      $or: [{ email }, { username }],
     });
 
     if (existingUser) {
-      return res.status(400).json({ error: 'User with this email or username already exists.' });
+      return res
+        .status(400)
+        .json({ error: 'User with this email or username already exists.' });
     }
 
     // Create new user
@@ -40,7 +46,7 @@ router.post('/register', async (req, res) => {
       username,
       email,
       password,
-      displayName: displayName || username
+      displayName: displayName || username,
     });
 
     await user.save();
@@ -57,8 +63,9 @@ router.post('/register', async (req, res) => {
         email: user.email,
         displayName: user.displayName,
         isStreamer: user.isStreamer,
-        isLive: user.isLive
-      }
+        isLive: user.isLive,
+        streamKey: user.streamKey,
+      },
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -75,7 +82,9 @@ router.post('/login', async (req, res) => {
 
     // Validation
     if (!email || !password) {
-      return res.status(400).json({ error: 'Please provide email and password.' });
+      return res
+        .status(400)
+        .json({ error: 'Please provide email and password.' });
     }
 
     // Find user by email
@@ -103,8 +112,8 @@ router.post('/login', async (req, res) => {
         displayName: user.displayName,
         isStreamer: user.isStreamer,
         isLive: user.isLive,
-        streamKey: user.streamKey
-      }
+        streamKey: user.streamKey,
+      },
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -130,8 +139,8 @@ router.get('/me', auth, async (req, res) => {
         streamKey: req.user.streamKey,
         followerCount: req.user.followerCount,
         followingCount: req.user.followingCount,
-        totalViews: req.user.totalViews
-      }
+        totalViews: req.user.totalViews,
+      },
     });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -151,15 +160,14 @@ router.put('/profile', auth, async (req, res) => {
     if (bio !== undefined) updates.bio = bio;
     if (avatar !== undefined) updates.avatar = avatar;
 
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      updates,
-      { new: true, runValidators: true }
-    ).select('-password');
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    }).select('-password');
 
     res.json({
       message: 'Profile updated successfully',
-      user
+      user,
     });
   } catch (error) {
     console.error('Profile update error:', error);
@@ -184,7 +192,9 @@ router.post('/become-streamer', auth, async (req, res) => {
     res.json({
       message: 'User is now a streamer',
       streamKey: user.streamKey,
-      rtmpUrl: `rtmp://${process.env.MEDIA_SERVER_URL || 'localhost'}:1935/live`
+      rtmpUrl: `rtmp://${
+        process.env.MEDIA_SERVER_URL || 'localhost'
+      }:1935/live`,
     });
   } catch (error) {
     console.error('Become streamer error:', error);
@@ -208,11 +218,15 @@ router.post('/regenerate-stream-key', auth, async (req, res) => {
     res.json({
       message: 'Stream key regenerated successfully',
       streamKey: user.streamKey,
-      rtmpUrl: `rtmp://${process.env.MEDIA_SERVER_URL || 'localhost'}:1935/live`
+      rtmpUrl: `rtmp://${
+        process.env.MEDIA_SERVER_URL || 'localhost'
+      }:1935/live`,
     });
   } catch (error) {
     console.error('Regenerate stream key error:', error);
-    res.status(500).json({ error: 'Server error while regenerating stream key.' });
+    res
+      .status(500)
+      .json({ error: 'Server error while regenerating stream key.' });
   }
 });
 
