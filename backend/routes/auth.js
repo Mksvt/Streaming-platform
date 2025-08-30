@@ -49,23 +49,32 @@ router.post('/register', async (req, res) => {
       displayName: displayName || username,
     });
 
+    // Generate and set the stream key
+    user.generateStreamKey();
+    console.log('[Auth] User object before saving:', user.toObject());
+
     await user.save();
+    console.log('[Auth] User object after saving:', user.toObject());
 
     // Generate token
     const token = generateToken(user._id);
 
+    const userResponse = {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      displayName: user.displayName,
+      isStreamer: user.isStreamer,
+      isLive: user.isLive,
+      streamKey: user.streamKey,
+    };
+
+    console.log('[Auth] Sending response to client:', userResponse);
+
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        displayName: user.displayName,
-        isStreamer: user.isStreamer,
-        isLive: user.isLive,
-        streamKey: user.streamKey,
-      },
+      user: userResponse,
     });
   } catch (error) {
     console.error('Registration error:', error);

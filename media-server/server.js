@@ -1,67 +1,112 @@
 const NodeMediaServer = require('node-media-server');
+const axios = require('axios');
 const path = require('path');
 require('dotenv').config();
 
-// Create media root directory
-const mediaRoot = path.join(__dirname, 'media');
-
 const config = {
   rtmp: {
-    port: parseInt(process.env.RTMP_PORT) || 1935,
+    port: 1935,
     chunk_size: 60000,
     gop_cache: true,
     ping: 30,
-    ping_timeout: 60
+    ping_timeout: 60,
   },
   http: {
-    port: parseInt(process.env.HTTP_PORT) || 8000,
-    mediaroot: mediaRoot,
-    allow_origin: '*'
+    port: 8000,
+    mediaroot: './media',
+    allow_origin: '*',
   },
-  // Removed trans block to avoid 'version is not defined' error
+  trans: {
+    ffmpeg: process.env.FFMPEG_PATH || 'ffmpeg',
+    tasks: [
+      {
+        app: 'live',
+        hls: true,
+        hlsFlags: '[hls_time=2:hls_list_size=3:hls_flags=delete_segments]',
+        hlsKeep: false, // Don't keep segments after stream ends
+      },
+    ],
+  },
+  auth: {
+    api: true,
+    api_user: 'admin',
+    api_pass: 'admin', // Replace with a secure password in a real app
+  },
+  // Relay and Fission are not used in this setup
 };
 
 const nms = new NodeMediaServer(config);
 
-// Handle RTMP publish events
-nms.on('prePublish', (id, StreamPath, args) => {
-  console.log('🎬 [NodeEvent] prePublish:', StreamPath);
-  
-  // Extract stream key from path (e.g., /live/streamKey)
-  const streamKey = StreamPath.split('/')[2];
-  console.log('🔑 Stream key:', streamKey);
-  
-  if (streamKey) {
-    console.log('🎥 RTMP stream started:', streamKey);
+nms.on('prePublish', async (id, StreamPath, args) => {
+  const streamKey = StreamPath.split('/').pop();
+  console.log(`[MediaServer] prePublish: Validating stream key: ${streamKey}`);
+
+  try {
+    // Use the backend to validate the stream key
+    const response = await axios.post(
+      `${process.env.BACKEND_API_URL}/streams/validate-key`,
+      { streamKey }
+    );
+
+    if (response.data.valid) {
+      console.log(
+        `[MediaServer] Stream key VALID for user: ${response.data.username}`
+      );
+      // This is a workaround to associate the session with the username.
+      // The 'live' app will now create files under /media/live/<username>
+      const session = nms.getSession(id);
+      session.publishStreamPath = `/live/${response.data.username}`;
+    } else {
+      throw new Error('Invalid stream key from backend');
+    }
+  } catch (error) {
+    console.error(
+      `[MediaServer] Stream key validation FAILED for key ${streamKey}. Rejecting session.`
+    );
+    const session = nms.getSession(id);
+    session.reject();
   }
 });
 
-nms.on('postPublish', (id, StreamPath, args) => {
-  console.log('✅ [NodeEvent] postPublish:', StreamPath);
-  console.log('📺 Stream is now live');
+nms.on('postPublish', async (id, StreamPath, args) => {
+  const username = StreamPath.split('/').pop();
+  console.log(
+    `[MediaServer] postPublish: Stream started for user: ${username}`
+  );
+  try {
+    await axios.post(`${process.env.BACKEND_API_URL}/streams/on-publish`, {
+      username,
+    });
+    console.log(
+      `[MediaServer] Notified backend that stream for ${username} is LIVE.`
+    );
+  } catch (error) {
+    console.error(
+      `[MediaServer] Error notifying backend of postPublish for ${username}:`,
+      error.message
+    );
+  }
 });
 
-nms.on('donePublish', (id, StreamPath, args) => {
-  console.log('⏹️ [NodeEvent] donePublish:', StreamPath);
-  console.log('🔄 Stream ended');
-});
-
-nms.on('prePlay', (id, StreamPath, args) => {
-  console.log('👀 [NodeEvent] prePlay:', StreamPath);
-});
-
-nms.on('postPlay', (id, StreamPath, args) => {
-  console.log('🎮 [NodeEvent] postPlay:', StreamPath);
-});
-
-nms.on('donePlay', (id, StreamPath, args) => {
-  console.log('👋 [NodeEvent] donePlay:', StreamPath);
+nms.on('donePublish', async (id, StreamPath, args) => {
+  const username = StreamPath.split('/').pop();
+  console.log(`[MediaServer] donePublish: Stream ended for user: ${username}`);
+  try {
+    await axios.post(`${process.env.BACKEND_API_URL}/streams/on-done`, {
+      username,
+    });
+    console.log(
+      `[MediaServer] Notified backend that stream for ${username} has FINISHED.`
+    );
+  } catch (error) {
+    console.error(
+      `[MediaServer] Error notifying backend of donePublish for ${username}:`,
+      error.message
+    );
+  }
 });
 
 nms.run();
 
-console.log('🚀 Node Media Server started');
-console.log(`📡 RTMP Server: rtmp://localhost:${config.rtmp.port}/live`);
-console.log(`🌐 HTTP Server: http://localhost:${config.http.port}`);
-console.log(`📁 Media Root: ${mediaRoot}`);
-console.log('✅ RTMP streaming enabled (HLS will be handled by FFmpeg)');
+console.log(`[MediaServer] RTMP server listening on port ${config.rtmp.port}`);
+console.log(`[MediaServer] HTTP server running on port ${config.http.port}`);

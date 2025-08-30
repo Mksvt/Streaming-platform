@@ -8,25 +8,44 @@ const fs = require('fs-extra');
 
 const router = express.Router();
 
+let ffmpegProcesses = {}; // Store ffmpeg processes by stream ID
+
+// Function to stop a specific FFmpeg process
+const stopFfmpeg = (streamId) => {
+  if (ffmpegProcesses[streamId]) {
+    console.log(`[FFmpeg] Stopping process for stream ${streamId}`);
+    ffmpegProcesses[streamId].kill('SIGKILL');
+    delete ffmpegProcesses[streamId];
+  }
+};
+
+// Graceful shutdown
+process.on('exit', () => {
+  console.log('[Server] Shutting down. Killing all FFmpeg processes.');
+  Object.keys(ffmpegProcesses).forEach(stopFfmpeg);
+});
+
 // @route   GET /api/streams/live
 // @desc    Get all live streams
 // @access  Public
 router.get('/live', async (req, res) => {
   try {
-    const liveStreams = await Stream.find({ 
+    const liveStreams = await Stream.find({
       status: 'LIVE',
-      isPublic: true 
+      isPublic: true,
     })
-    .populate('user', 'username displayName avatar isLive')
-    .sort({ startedAt: -1 });
+      .populate('user', 'username displayName avatar isLive')
+      .sort({ startedAt: -1 });
 
     res.json({
       streams: liveStreams,
-      count: liveStreams.length
+      count: liveStreams.length,
     });
   } catch (error) {
     console.error('Get live streams error:', error);
-    res.status(500).json({ error: 'Server error while fetching live streams.' });
+    res
+      .status(500)
+      .json({ error: 'Server error while fetching live streams.' });
   }
 });
 
@@ -36,7 +55,7 @@ router.get('/live', async (req, res) => {
 router.get('/user/:username', async (req, res) => {
   try {
     const { username } = req.params;
-    
+
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
@@ -44,15 +63,17 @@ router.get('/user/:username', async (req, res) => {
 
     const liveStream = await Stream.findOne({
       user: user._id,
-      status: 'LIVE'
+      status: 'LIVE',
     }).populate('user', 'username displayName avatar isLive');
 
     if (!liveStream) {
-      return res.status(404).json({ error: 'No live stream found for this user.' });
+      return res
+        .status(404)
+        .json({ error: 'No live stream found for this user.' });
     }
 
     res.json({
-      stream: liveStream
+      stream: liveStream,
     });
   } catch (error) {
     console.error('Get user stream error:', error);
@@ -67,7 +88,7 @@ router.get('/user/:username/videos', async (req, res) => {
   try {
     const { username } = req.params;
     const { page = 1, limit = 10 } = req.query;
-    
+
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
@@ -76,23 +97,23 @@ router.get('/user/:username/videos', async (req, res) => {
     const options = {
       page: parseInt(page),
       limit: parseInt(limit),
-      sort: { endedAt: -1 }
+      sort: { endedAt: -1 },
     };
 
     const streams = await Stream.find({
       user: user._id,
       status: 'FINISHED',
-      isPublic: true
+      isPublic: true,
     })
-    .populate('user', 'username displayName avatar')
-    .sort({ endedAt: -1 })
-    .limit(options.limit)
-    .skip((options.page - 1) * options.limit);
+      .populate('user', 'username displayName avatar')
+      .sort({ endedAt: -1 })
+      .limit(options.limit)
+      .skip((options.page - 1) * options.limit);
 
     const total = await Stream.countDocuments({
       user: user._id,
       status: 'FINISHED',
-      isPublic: true
+      isPublic: true,
     });
 
     res.json({
@@ -102,8 +123,8 @@ router.get('/user/:username/videos', async (req, res) => {
         totalPages: Math.ceil(total / options.limit),
         totalStreams: total,
         hasNextPage: options.page * options.limit < total,
-        hasPrevPage: options.page > 1
-      }
+        hasPrevPage: options.page > 1,
+      },
     });
   } catch (error) {
     console.error('Get user videos error:', error);
@@ -116,15 +137,17 @@ router.get('/user/:username/videos', async (req, res) => {
 // @access  Public
 router.get('/:id', async (req, res) => {
   try {
-    const stream = await Stream.findById(req.params.id)
-      .populate('user', 'username displayName avatar isLive');
+    const stream = await Stream.findById(req.params.id).populate(
+      'user',
+      'username displayName avatar isLive'
+    );
 
     if (!stream) {
       return res.status(404).json({ error: 'Stream not found.' });
     }
 
     res.json({
-      stream
+      stream,
     });
   } catch (error) {
     console.error('Get stream error:', error);
@@ -142,7 +165,7 @@ router.post('/start', auth, isStreamer, async (req, res) => {
     // Check if user already has a live stream
     const existingLiveStream = await Stream.findOne({
       user: req.user._id,
-      status: 'LIVE'
+      status: 'LIVE',
     });
 
     if (existingLiveStream) {
@@ -158,8 +181,12 @@ router.post('/start', auth, isStreamer, async (req, res) => {
       category: category || 'Just Chatting',
       tags: tags || [],
       isPublic,
-      rtmpUrl: `rtmp://${process.env.MEDIA_SERVER_URL || 'localhost'}:1935/live`,
-      playbackUrl: `http://${process.env.MEDIA_SERVER_URL || 'localhost'}:8000/live/${req.user.streamKey}/index.m3u8`
+      rtmpUrl: `rtmp://${
+        process.env.MEDIA_SERVER_URL || 'localhost'
+      }:1935/live`,
+      playbackUrl: `http://${
+        process.env.MEDIA_SERVER_URL || 'localhost'
+      }:8000/live/${req.user.streamKey}/index.m3u8`,
     });
 
     await newStream.save();
@@ -169,7 +196,7 @@ router.post('/start', auth, isStreamer, async (req, res) => {
 
     res.status(201).json({
       message: 'Stream started successfully',
-      stream: newStream
+      stream: newStream,
     });
   } catch (error) {
     console.error('Start stream error:', error);
@@ -201,7 +228,7 @@ router.put('/:id/update', auth, async (req, res) => {
 
       res.json({
         message: 'Stream updated successfully',
-        stream: updatedStream
+        stream: updatedStream,
       });
     });
   } catch (error) {
@@ -228,7 +255,7 @@ router.post('/:id/end', auth, async (req, res) => {
 
       res.json({
         message: 'Stream ended successfully',
-        stream: req.resource
+        stream: req.resource,
       });
     });
   } catch (error) {
@@ -252,7 +279,7 @@ router.get('/search', async (req, res) => {
       query.$or = [
         { title: { $regex: q, $options: 'i' } },
         { description: { $regex: q, $options: 'i' } },
-        { tags: { $in: [new RegExp(q, 'i')] } }
+        { tags: { $in: [new RegExp(q, 'i')] } },
       ];
     }
 
@@ -271,8 +298,8 @@ router.get('/search', async (req, res) => {
         totalPages: Math.ceil(total / parseInt(limit)),
         totalStreams: total,
         hasNextPage: parseInt(page) * parseInt(limit) < total,
-        hasPrevPage: parseInt(page) > 1
-      }
+        hasPrevPage: parseInt(page) > 1,
+      },
     });
   } catch (error) {
     console.error('Search streams error:', error);
@@ -280,196 +307,110 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// Start streaming with test video
-router.post('/start-test-stream', auth, async (req, res) => {
+// @route   POST /api/streams/on-publish
+// @desc    Webhook from media server when a stream starts
+// @access  Internal
+router.post('/on-publish', async (req, res) => {
+  const { username } = req.body;
+  console.log(`[Webhook] Received on-publish for username: ${username}`);
   try {
-    console.log('🔐 Auth middleware passed, user:', req.user);
-    console.log('📝 Request body:', req.body);
-    
-    const { title, description } = req.body;
-    const userId = req.user.id;
-    
-    console.log('👤 User ID:', userId);
-    console.log('📺 Title:', title);
-    console.log('📝 Description:', description);
-
-    // Create stream record
-    console.log('📝 Creating Stream object...');
-    
-    // Generate a unique stream key for this test stream
-    const streamKey = `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    console.log('🔑 Generated stream key:', streamKey);
-    
-    const stream = new Stream({
-      title: title || 'Test Stream',
-      description: description || 'Automated test stream',
-      user: userId,
-      streamKey: streamKey,
-      status: 'LIVE',
-      startedAt: new Date()
-    });
-
-    console.log('💾 Stream object created:', stream);
-    console.log('💾 Saving stream to database...');
-    
-    await stream.save();
-    
-    console.log('✅ Stream saved successfully, ID:', stream._id);
-
-    // Start FFmpeg to generate HLS files directly
-    console.log('🎬 Starting FFmpeg process...');
-         console.log('🎬 HLS Output:', `../../media-server/media/live/${streamKey}/`);
-    
-    let ffmpegProcess = null;
-    
-    try {
-                    // Create HLS output directory
-       const hlsOutputDir = path.join(__dirname, '..', '..', 'media-server', 'media', 'live', streamKey);
-       await fs.ensureDir(hlsOutputDir);
-       console.log('📁 Created HLS output directory:', hlsOutputDir);
-       
-       const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
-               ffmpegProcess = spawn(ffmpegPath, [
-          '-re', // Read input at native frame rate
-          '-f', 'lavfi', // Use lavfi input format
-          '-i', 'testsrc=size=1280x720:rate=30', // Generate test pattern
-          '-f', 'lavfi', 
-          '-i', 'sine=frequency=1000:duration=0', // Generate test audio
-          '-c:v', 'libx264', // Video codec
-          '-preset', 'ultrafast', // Fast encoding
-          '-tune', 'zerolatency', // Low latency
-          '-c:a', 'aac', // Audio codec
-          '-f', 'hls', // Output format: HLS
-          '-hls_time', '2', // Segment duration (2 seconds) - швидше створення
-          '-hls_list_size', '3', // Number of segments to keep - краща синхронізація
-          '-hls_flags', 'delete_segments+omit_endlist', // Видаляти старі + не закривати плейлист
-          '-hls_allow_cache', '0', // Не кешувати сегменти
-          '-hls_segment_filename', `media-server/media/live/${streamKey}/%d.ts`, // Segment filename pattern - проста нумерація
-          `media-server/media/live/${streamKey}/index.m3u8` // HLS playlist output
-        ], {
-        stdio: 'pipe',
-        cwd: path.join(__dirname, '..', '..') // Set working directory to streaming-platform folder
-      });
-      
-      console.log('✅ FFmpeg process started, PID:', ffmpegProcess.pid);
-      
-             // Wait for initial segments to be created before making stream available
-       let segmentCount = 0;
-               const requiredSegments = 3; // Потрібно 3 сегменти для стабільного відтворення
-      
-      // Handle FFmpeg process events
-      ffmpegProcess.stdout.on('data', (data) => {
-        console.log(`FFmpeg stdout: ${data}`);
-      });
-
-             // Check for segments every 2 seconds
-       const segmentCheckInterval = setInterval(async () => {
-         try {
-           const files = await fs.readdir(hlsOutputDir);
-           const tsFiles = files.filter(file => file.endsWith('.ts'));
-           
-           if (tsFiles.length >= requiredSegments) {
-             console.log(`🎯 Stream ready! Found ${tsFiles.length} segments`);
-             clearInterval(segmentCheckInterval);
-           }
-         } catch (error) {
-           console.log('⚠️ Error checking segments:', error.message);
-         }
-       }, 2000);
-       
-       ffmpegProcess.stderr.on('data', (data) => {
-         console.log(`FFmpeg stderr: ${data}`);
-       });
-
-      ffmpegProcess.on('close', (code) => {
-        console.log(`FFmpeg process exited with code ${code}`);
-        // Update stream status when FFmpeg stops
-        Stream.findByIdAndUpdate(stream._id, { 
-          status: 'FINISHED', 
-          endedAt: new Date() 
-        });
-      });
-      
-      // Handle FFmpeg spawn errors
-      ffmpegProcess.on('error', (error) => {
-        console.log('⚠️ FFmpeg process error:', error.message);
-        console.log('⚠️ FFmpeg not available, continuing without video generation');
-        ffmpegProcess = null; // Reset to null so we continue without FFmpeg
-      });
-      
-    } catch (ffmpegError) {
-      console.log('⚠️ FFmpeg not available, continuing without video generation');
-      console.log('⚠️ FFmpeg error:', ffmpegError.message);
-      ffmpegProcess = null;
+    const user = await User.findOne({ username });
+    if (!user) {
+      console.error(`[Webhook] User not found for username: ${username}`);
+      return res.status(404).send('User not found');
     }
 
-    // Store FFmpeg process for later termination (if available)
-    if (ffmpegProcess) {
-      console.log('💾 Storing FFmpeg process in stream...');
-      stream.ffmpegProcess = ffmpegProcess;
-      
-      console.log('💾 Saving stream with FFmpeg process...');
-      await stream.save();
-      
-      console.log('✅ Stream updated with FFmpeg process');
-    } else {
-      console.log('💾 No FFmpeg process to store, saving stream without it...');
-      await stream.save();
-      
-      console.log('✅ Stream saved without FFmpeg process');
-    }
+    // Use findOneAndUpdate with upsert to create or update the stream
+    const stream = await Stream.findOneAndUpdate(
+      { user: user._id, status: { $ne: 'FINISHED' } }, // Find a non-finished stream for this user
+      {
+        $set: {
+          status: 'LIVE',
+          startedAt: new Date(),
+          title: `${user.displayName}'s Live Stream`,
+          description: 'Live from OBS/Streaming Software',
+          streamKey: user.streamKey,
+          user: user._id,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
-    const response = {
-      success: true,
-      message: ffmpegProcess ? 'Test stream started with FFmpeg!' : 'Test stream started! (FFmpeg not available)',
-      streamId: stream._id,
-      streamKey: streamKey,
-      rtmpUrl: `rtmp://localhost:1935/live/${streamKey}`,
-      hlsUrl: `http://localhost:8000/live/${streamKey}/index.m3u8`,
-      ffmpegAvailable: !!ffmpegProcess,
-      note: ffmpegProcess ? 'Video stream is being generated' : 'Stream created but no video content (FFmpeg required)'
-    };
-    
-    console.log('📤 Sending response:', response);
-    res.json(response);
+    await User.findByIdAndUpdate(user._id, { isLive: true });
 
+    console.log(
+      `[Webhook] Stream ${stream._id} is now LIVE for user ${username}.`
+    );
+    res.status(200).send('OK');
   } catch (error) {
-    console.error('❌ Error starting test stream:', error);
-    console.error('❌ Error stack:', error.stack);
-    console.error('❌ Error message:', error.message);
-    
-    res.status(500).json({ 
-      error: 'Failed to start test stream',
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error('[Webhook] on-publish error:', error);
+    res.status(500).send('Server Error');
   }
 });
 
-// Stop streaming
-router.post('/:id/stop', auth, async (req, res) => {
+// @route   POST /api/streams/on-done
+// @desc    Webhook from media server when a stream ends
+// @access  Internal
+router.post('/on-done', async (req, res) => {
+  const { username } = req.body;
+  console.log(`[Webhook] Received on-done for username: ${username}`);
   try {
-    const stream = await Stream.findById(req.params.id);
-    
-    if (!stream) {
-      return res.status(404).json({ error: 'Stream not found' });
+    const user = await User.findOne({ username });
+    if (!user) {
+      console.error(`[Webhook] User not found for username: ${username}`);
+      return res.status(404).send('User not found');
     }
 
-    // Stop FFmpeg process if it exists
-    if (stream.ffmpegProcess) {
-      stream.ffmpegProcess.kill('SIGTERM');
+    const stream = await Stream.findOneAndUpdate(
+      { user: user._id, status: 'LIVE' },
+      { $set: { status: 'FINISHED', endedAt: new Date() } }
+    );
+
+    await User.findByIdAndUpdate(user._id, { isLive: false });
+
+    if (stream) {
+      console.log(
+        `[Webhook] Stream ${stream._id} is now FINISHED for user ${username}.`
+      );
+    } else {
+      console.log(
+        `[Webhook] No active stream found for user ${username} to mark as finished.`
+      );
     }
 
-    // Update stream status
-    stream.status = 'FINISHED';
-    stream.endedAt = new Date();
-    await stream.save();
-
-    res.json({ success: true, message: 'Stream stopped' });
-
+    res.status(200).send('OK');
   } catch (error) {
-    console.error('Error stopping stream:', error);
-    res.status(500).json({ error: 'Failed to stop stream' });
+    console.error('[Webhook] on-done error:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   POST /api/streams/validate-key
+// @desc    Validate a stream key (used by media server)
+// @access  Internal
+router.post('/validate-key', async (req, res) => {
+  const { streamKey } = req.body;
+  console.log(`[Backend] Validating stream key: ${streamKey}`);
+
+  if (!streamKey) {
+    return res
+      .status(400)
+      .json({ valid: false, error: 'Stream key is required.' });
+  }
+
+  try {
+    const user = await User.findOne({ streamKey });
+
+    if (user) {
+      console.log(`[Backend] Stream key is valid for user: ${user.username}`);
+      res.json({ valid: true, username: user.username });
+    } else {
+      console.log(`[Backend] Invalid stream key: ${streamKey}`);
+      res.status(404).json({ valid: false, error: 'Invalid stream key.' });
+    }
+  } catch (error) {
+    console.error('[Backend] Error validating stream key:', error);
+    res.status(500).json({ valid: false, error: 'Server error.' });
   }
 });
 
