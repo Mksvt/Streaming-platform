@@ -23,16 +23,15 @@ const config = {
         app: 'live',
         hls: true,
         hlsFlags: '[hls_time=2:hls_list_size=3:hls_flags=delete_segments]',
-        hlsKeep: false, // Don't keep segments after stream ends
+        hlsKeep: false,
       },
     ],
   },
   auth: {
     api: true,
     api_user: 'admin',
-    api_pass: 'admin', // Replace with a secure password in a real app
+    api_pass: 'admin', 
   },
-  // Relay and Fission are not used in this setup
 };
 
 const nms = new NodeMediaServer(config);
@@ -42,18 +41,15 @@ nms.on('prePublish', async (id, StreamPath, args) => {
   console.log(`[MediaServer] prePublish: Validating stream key: ${streamKey}`);
 
   try {
-    // Use the backend to validate the stream key
     const response = await axios.post(
-      `${process.env.BACKEND_API_URL}/streams/validate-key`,
+      `${process.env.BACKEND_API_URL}/api/webhooks/on-publish`,
       { streamKey }
     );
 
-    if (response.data.valid) {
+    if (response.status === 200) {
       console.log(
         `[MediaServer] Stream key VALID for user: ${response.data.username}`
       );
-      // This is a workaround to associate the session with the username.
-      // The 'live' app will now create files under /media/live/<username>
       const session = nms.getSession(id);
       session.publishStreamPath = `/live/${response.data.username}`;
     } else {
@@ -61,7 +57,8 @@ nms.on('prePublish', async (id, StreamPath, args) => {
     }
   } catch (error) {
     console.error(
-      `[MediaServer] Stream key validation FAILED for key ${streamKey}. Rejecting session.`
+      `[MediaServer] Stream key validation FAILED for key ${streamKey}. Rejecting session.`,
+      error.message
     );
     const session = nms.getSession(id);
     session.reject();
@@ -74,7 +71,7 @@ nms.on('postPublish', async (id, StreamPath, args) => {
     `[MediaServer] postPublish: Stream started for user: ${username}`
   );
   try {
-    await axios.post(`${process.env.BACKEND_API_URL}/streams/on-publish`, {
+    await axios.post(`${process.env.BACKEND_API_URL}/api/webhooks/on-publish`, {
       username,
     });
     console.log(
@@ -92,7 +89,7 @@ nms.on('donePublish', async (id, StreamPath, args) => {
   const username = StreamPath.split('/').pop();
   console.log(`[MediaServer] donePublish: Stream ended for user: ${username}`);
   try {
-    await axios.post(`${process.env.BACKEND_API_URL}/streams/on-done`, {
+    await axios.post(`${process.env.BACKEND_API_URL}/api/webhooks/on-done`, {
       username,
     });
     console.log(

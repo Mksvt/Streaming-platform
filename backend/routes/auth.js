@@ -48,13 +48,8 @@ router.post('/register', async (req, res) => {
       password,
       displayName: displayName || username,
     });
-
-    // Generate and set the stream key
-    user.generateStreamKey();
-    console.log('[Auth] User object before saving:', user.toObject());
-
+    user.streamKey = user.generateStreamKey(); // Генерация ключа
     await user.save();
-    console.log('[Auth] User object after saving:', user.toObject());
 
     // Generate token
     const token = generateToken(user._id);

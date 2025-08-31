@@ -5,12 +5,12 @@ import VideoPlayer from '@/components/VideoPlayer';
 import { Loader2, WifiOff } from 'lucide-react';
 import {
   Card,
-  CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import io from 'socket.io-client';
 
 interface Stream {
   _id: string;
@@ -32,49 +32,26 @@ export default function ViewerPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStreams = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/streams/live');
-        if (!response.ok) {
-          throw new Error('Failed to fetch streams');
-        }
-        const data = await response.json();
-        const liveStreams: Stream[] = data.streams || [];
-        setStreams(liveStreams);
+    const socket = io('http://localhost:3001');
 
-        // Logic to set or update the current stream
-        if (liveStreams.length > 0) {
-          if (currentStream) {
-            // If there's a current stream, check if it's still live
-            const isCurrentStreamStillLive = liveStreams.some(
-              (s) => s._id === currentStream._id
-            );
-            if (!isCurrentStreamStillLive) {
-              // If not, switch to the first available live stream
-              setCurrentStream(liveStreams[0]);
-            }
-          } else {
-            // If no stream is selected, default to the first one
-            setCurrentStream(liveStreams[0]);
-          }
-        } else {
-          // No live streams are available
-          setCurrentStream(null);
-        }
-      } catch (error) {
-        console.error('Error fetching live streams:', error);
-        setStreams([]);
-        setCurrentStream(null);
-      } finally {
-        setIsLoading(false);
+    socket.on('streams-updated', (updatedStreams: Stream[]) => {
+      setStreams(updatedStreams);
+      setIsLoading(false);
+
+      if (updatedStreams.length === 0) {
+        setCurrentStream(null); 
+      } else if (
+        !currentStream ||
+        !updatedStreams.some((stream) => stream._id === currentStream._id)
+      ) {
+        setCurrentStream(updatedStreams[0]); 
       }
+    });
+
+    return () => {
+      socket.disconnect();
     };
-
-    fetchStreams();
-    const intervalId = setInterval(fetchStreams, 10000); // Refresh every 10 seconds
-
-    return () => clearInterval(intervalId);
-  }, [currentStream]); // Dependency array includes currentStream to handle updates correctly
+  }, [currentStream]);
 
   const handleStreamChange = (streamId: string) => {
     const selected = streams.find((s) => s._id === streamId);

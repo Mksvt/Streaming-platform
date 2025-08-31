@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Copy, Check, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
-import VideoPlayer from '@/components/VideoPlayer'; // Reusable video player
+import VideoPlayer from '@/components/VideoPlayer';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -14,13 +14,9 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-// Define a type for the user object
-interface User {
-  displayName: string;
-  streamKey: string;
-  username: string;
-}
+import { fetchUserById } from '@/lib/api';
+import { User } from '@/types/user'; 
+import io from 'socket.io-client';
 
 export default function StreamerPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -29,17 +25,39 @@ export default function StreamerPage() {
   const [copiedUrl, setCopiedUrl] = useState(false);
 
   useEffect(() => {
-    // Fetch user data from localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       const parsedUser: User = JSON.parse(storedUser);
-      setUser(parsedUser);
+      if (!parsedUser.streamKey) {
+        fetchUserById(parsedUser.id).then((data) => {
+          parsedUser.streamKey = data.streamKey;
+          localStorage.setItem('user', JSON.stringify(parsedUser));
+          setUser(parsedUser);
+        });
+      } else {
+        setUser(parsedUser);
+      }
     } else {
       toast.error('You must be logged in to view this page.');
       // In a real app, you'd redirect to the login page
       // window.location.href = '/';
     }
   }, []);
+
+  useEffect(() => {
+    const socket = io('http://localhost:3001');
+
+    if (user) {
+      socket.emit('stream-started', { userId: user.id });
+    }
+
+    return () => {
+      if (user) {
+        socket.emit('stream-ended', { userId: user.id });
+      }
+      socket.disconnect();
+    };
+  }, [user]);
 
   const copyToClipboard = (text: string, type: 'key' | 'url') => {
     navigator.clipboard.writeText(text).then(() => {
